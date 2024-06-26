@@ -55,6 +55,21 @@ func (s *Server) Handler(conn net.Conn) {
 	s.Online[user.Name] = user
 	s.MapLock.Unlock()
 	s.Broadcast(*user, "has connected")
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			cnt, err := conn.Read(buf)
+			if err != nil {
+				fmt.Println("Error reading:", err.Error())
+				return
+			}
+			if cnt == 0 {
+				s.Broadcast(*user, "has disconnected")
+			}
+			msg := string(buf[:cnt-1])
+			s.Broadcast(*user, msg)
+		}
+	}()
 	select {}
 }
 
