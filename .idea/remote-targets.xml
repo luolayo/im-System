@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="WSL - Arch" type="wsl" uuid="878922a6-7872-4d8a-85f9-cfc4b08ed6f1">
+        <config>
+          <option name="distributionMsId" value="Arch" />
+          <option name="projectRootOnTarget" value="{exitCode=0, timeout=false, cancelled=false, stdout=/tmp/tmp.SvVe5BE5WI&#10;, stderr=}/im-System" />
+        </config>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config>
+            <option name="goPath" value="/home/luola/go" />
+            <option name="goRoot" value="/usr/sbin/go" />
+            <option name="goVersion" value="go1.22.4 linux/amd64" />
+          </config>
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>
