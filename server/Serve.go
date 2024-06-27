@@ -55,6 +55,7 @@ func (s *Server) Handler(conn net.Conn) {
 	s.Online[user.Name] = user
 	s.MapLock.Unlock()
 	s.Broadcast(*user, "has connected")
+	// If the user sends a message, send the message to everyone
 	go func() {
 		buf := make([]byte, 4096)
 		for {
