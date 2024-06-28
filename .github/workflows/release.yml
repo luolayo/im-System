@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: $HOME/build/im-System/im-System-${{ matrix.goos }}_${{ matrix.goarch }}
+          asset_path: $HOME/build/im-System-${{ matrix.goos }}_${{ matrix.goarch }}
           asset_name: im-System-${{ matrix.goos }}-${{ matrix.goarch }}
           asset_content_type: application/octet-stream
 
