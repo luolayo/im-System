@@ -2,15 +2,15 @@ name: Release
 
 on:
   release:
-    types: [ published ]
+    types: [published]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ linux, darwin, windows ]
-        goarch: [ amd64 ]
+        goos: [linux, darwin, windows]
+        goarch: [amd64]
 
     steps:
       - name: Checkout code
@@ -21,14 +21,22 @@ jobs:
         with:
           go-version: '1.22' # 使用您需要的Go版本
 
+      - name: Display Go environment
+        run: go env
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
+          echo "Building for GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}"
           mkdir -p build/${{ matrix.goos }}_${{ matrix.goarch }}
           go mod tidy
-           go build -ldflags "-s -w" -trimpath -o build/${{ matrix.goos }}_${{ matrix.goarch }}/im-system ./
+          go build -v -ldflags "-s -w" -trimpath -o build/${{ matrix.goos }}_${{ matrix.goarch }}/im-system .
+          echo "Build completed for GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}"
+
+      - name: List build directory
+        run: ls -alh build/${{ matrix.goos }}_${{ matrix.goarch }}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
