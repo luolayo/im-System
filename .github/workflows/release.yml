@@ -2,7 +2,7 @@ name: Release
 
 on:
   release:
-    types: [ created ]
+    types: [created]
   workflow_dispatch:
 
 jobs:
@@ -14,8 +14,8 @@ jobs:
       repository-projects: write
     strategy:
       matrix:
-        goos: [ linux, darwin, windows ]
-        goarch: [ amd64 ]
+        goos: [linux, darwin, windows]
+        goarch: [amd64]
 
     steps:
       - name: Checkout code
@@ -59,10 +59,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set Upload URL Environment Variable
+        run: echo "UPLOAD_URL=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_ENV
+
+      - name: Print Draft Release URL
+        run: echo "${{ env.UPLOAD_URL }}"
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: $HOME/build/im-System-${{ matrix.goos }}_${{ matrix.goarch }}
           asset_name: im-System-${{ matrix.goos }}-${{ matrix.goarch }}
           asset_content_type: application/octet-stream
