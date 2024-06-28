@@ -2,7 +2,8 @@ name: Release
 
 on:
   release:
-    types: [published]
+    types: [created]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,13 +20,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.19' # 使用您需要的Go版本
+          go-version: '1.22' # 使用您需要的Go版本
 
       - name: Display Go environment
         run: go env
-
-      - name: Go to project directory
-        run: cd im-System # 确保在正确的目录中
 
       - name: Display current directory
         run: pwd
@@ -34,6 +32,7 @@ jobs:
         run: ls -alh
 
       - name: Build
+        working-directory: ./im-System # 确保在正确的目录中
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -45,12 +44,34 @@ jobs:
           echo "Build completed for GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}"
 
       - name: List build directory
+        working-directory: ./im-System # 确保在正确的目录中
         run: ls -alh build/${{ matrix.goos }}_${{ matrix.goarch }}
+
+      - name: Create Draft Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: true
+          prerelease: false
+          body: "Automated draft release from GitHub Actions."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: build/${{ matrix.goos }}_${{ matrix.goarch }}/im-System
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: im-System/build/${{ matrix.goos }}_${{ matrix.goarch }}/im-System
           asset_name: im-System-${{ matrix.goos }}-${{ matrix.goarch }}
           asset_content_type: application/octet-stream
+
+      - name: Publish Release
+        if: success()
+        run: |
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"draft":false}' \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.create_release.outputs.id }}"
