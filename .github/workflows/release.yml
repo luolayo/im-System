@@ -59,7 +59,7 @@ jobs:
         if: success()
         run: |
           curl -X PATCH \
-          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Authorization: token ${{ GITHUB_TOKEN }}" \
           -H "Content-Type: application/json" \
           -d '{"draft":false}' \
           "${{ github.api_url }}/repos/${{ github.repository }}/releases/${{ github.event.release.id }}"
