@@ -26,7 +26,7 @@ jobs:
         run: mkdir -p $HOME/build
 
       - name: Copy project to build directory
-        run: cp -r $GITHUB_WORKSPACE/im-System $HOME/build/
+        run: cp -r $GITHUB_WORKSPACE $HOME/build/
 
       - name: Build
         env:
