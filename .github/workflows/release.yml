@@ -2,16 +2,20 @@ name: Release
 
 on:
   release:
-    types: [created]
+    types: [ created ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64]
+        goos: [ linux, darwin, windows ]
+        goarch: [ amd64 ]
 
     steps:
       - name: Checkout code
