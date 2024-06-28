@@ -47,16 +47,11 @@ jobs:
       - name: List build directory
         run: ls -alh $HOME/build
 
-      - name: Set up URL
-        env:
-          URL: "/home/runner/build"
-        run: echo ${{ URL }}
-
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ URL }}/im-System-${{ matrix.goos }}_${{ matrix.goarch }}
+          asset_path: /home/runner/build/im-System-${{ matrix.goos }}_${{ matrix.goarch }}
           asset_name: im-System-${{ matrix.goos }}-${{ matrix.goarch }}
           asset_content_type: application/octet-stream
 
