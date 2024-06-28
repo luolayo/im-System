@@ -42,7 +42,7 @@ jobs:
           go mod tidy
           go build -v -ldflags "-s -w" -trimpath -o $HOME/build/im-System-${{ matrix.goos }}_${{ matrix.goarch }} .
           echo "Build completed for GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}"
-          echo "Built file path: $HOME/build/im-System-${{ matrix.goos }}_${{ matrix.goarch }}"
+          echo "Built file path: $HOME/build"
 
       - name: List build directory
         run: ls -alh $HOME/build
@@ -59,11 +59,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set Upload URL Environment Variable
-        run: echo "UPLOAD_URL=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_ENV
-
       - name: Print Draft Release URL
-        run: echo "${{ env.UPLOAD_URL }}"
+        run: echo "$HOME/build"
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
