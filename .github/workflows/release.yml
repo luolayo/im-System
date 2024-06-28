@@ -2,7 +2,7 @@ name: Release
 
 on:
   release:
-    types: [ created ]
+    types: [ created, published ]
   workflow_dispatch:
 
 jobs:
@@ -15,51 +15,15 @@ jobs:
     strategy:
       matrix:
         goos: [ linux, darwin, windows ]
-        goarch: [ amd64 ]
+        goarch: [ amd64, arm64,386 ]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Go
-        uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1
         with:
-          go-version: '1.22'
-
-      - name: Create build directory
-        run: mkdir -p $HOME/build
-
-      - name: Copy project to build directory
-        run: cp -r $GITHUB_WORKSPACE $HOME/build/
-
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          echo "Building for GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}"
-          cd $HOME/build/im-System
-          go mod tidy
-          go build -v -ldflags "-s -w" -trimpath -o $HOME/build/im-System-${{ matrix.goos }}_${{ matrix.goarch }} .
-          echo "Build completed for GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}"
-          echo "Built file path: $HOME/build"
-
-      - name: List build directory
-        run: ls -alh $HOME/build
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: /home/runner/build/im-System-${{ matrix.goos }}_${{ matrix.goarch }}
-          asset_name: im-System-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_content_type: application/octet-stream
-
-      - name: Publish Release
-        if: success()
-        run: |
-          curl -X PATCH \
-          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d '{"draft":false}' \
-          "${{ github.api_url }}/repos/${{ github.repository }}/releases/${{ github.event.release.id }}"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          goversion: 1.22
+          binary_name: "im-System"
+          extra_files: README.md
