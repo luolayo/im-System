@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ linux, darwin, windows ]
+        goarch: [ amd64 ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.22' # 使用您需要的Go版本
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p build/${{ matrix.goos }}_${{ matrix.goarch }}
+          go mod tidy
+           go build -ldflags "-s -w" -trimpath -o build/${{ matrix.goos }}_${{ matrix.goarch }}/im-system ./
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: build/${{ matrix.goos }}_${{ matrix.goarch }}/im-system
+          asset_name: im-system-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_content_type: application/octet-stream
