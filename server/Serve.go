@@ -24,6 +24,7 @@ type Server struct {
 
 // NewServer This is a constructor for the Serve struct
 func NewServer(ip string, port int) *Server {
+	fmt.Println("Server is starting")
 	return &Server{
 		Ip:      ip,
 		Port:    port,
