@@ -52,26 +52,9 @@ func (s *Server) Broadcast(user model.User, msg string) {
 func (s *Server) Handler(conn net.Conn) {
 	fmt.Println("A new connection has been established")
 	user := model.NewUser(conn)
-	s.MapLock.Lock()
-	s.Online[user.Name] = user
-	s.MapLock.Unlock()
-	s.Broadcast(*user, "has connected")
+	s.userOnline(user)
 	// If the user sends a message, send the message to everyone
-	go func() {
-		buf := make([]byte, 4096)
-		for {
-			cnt, err := conn.Read(buf)
-			if err != nil {
-				fmt.Println("Error reading:", err.Error())
-				return
-			}
-			if cnt == 0 {
-				s.Broadcast(*user, "has disconnected")
-			}
-			msg := string(buf[:cnt-1])
-			s.Broadcast(*user, msg)
-		}
-	}()
+	go s.sendMsg(conn, user)
 	select {}
 }
 
@@ -96,5 +79,38 @@ func (s *Server) Start() {
 			return
 		}
 		go s.Handler(conn)
+	}
+}
+
+// userOnline User goes online
+func (s *Server) userOnline(user *model.User) {
+	s.MapLock.Lock()
+	s.Online[user.Name] = user
+	s.MapLock.Unlock()
+	s.Broadcast(*user, "has connected")
+}
+
+// userOffline User goes offline
+func (s *Server) userOffline(user *model.User) {
+	s.MapLock.Lock()
+	delete(s.Online, user.Name)
+	s.MapLock.Unlock()
+	s.Broadcast(*user, "has disconnected")
+}
+
+func (s *Server) sendMsg(conn net.Conn, user *model.User) {
+	buf := make([]byte, 4096)
+	for {
+		cnt, err := conn.Read(buf)
+		if err != nil {
+			fmt.Println("Error reading:", err.Error())
+			return
+		}
+		msg := string(buf[:cnt-1])
+		if msg == "exit" {
+			s.userOffline(user)
+			return
+		}
+		s.Broadcast(*user, msg)
 	}
 }
