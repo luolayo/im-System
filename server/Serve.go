@@ -49,8 +49,7 @@ func (s *Server) broadcast(user *model.User, msg string) {
 // Handler This is a method that will handle the connection
 func (s *Server) handler(conn net.Conn) {
 	user := model.NewUser(conn)
-	s.userOnline(user)
-	// If the user sends a message, send the message to everyone
+	s.userOnline(user) // If the user sends a message, send the message to everyone
 	go s.sendMsg(user)
 	select {}
 }
@@ -109,9 +108,6 @@ func (s *Server) sendMsg(user *model.User) {
 	for {
 		cnt, err := user.Conn.Read(buf)
 		if err != nil && err != io.EOF {
-			if err == io.EOF {
-				return
-			}
 			log.Printf("Error reading from %s: %v", user.Name, err)
 			return
 		}
