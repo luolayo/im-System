@@ -5,6 +5,7 @@ import (
 	"im-System/model"
 	"log"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -115,6 +116,21 @@ func (s *Server) sendMsg(conn net.Conn, user *model.User) {
 			s.userOffline(user)
 			return
 		}
+		if msg == "list" {
+			user.C <- s.listUsers()
+			continue
+		}
 		s.Broadcast(user, msg)
 	}
+}
+
+func (s *Server) listUsers() string {
+	// Print out all online users
+	s.MapLock.Lock()
+	defer s.MapLock.Unlock()
+	var users []string
+	for _, user := range s.Online {
+		users = append(users, user.Name)
+	}
+	return "Online users: " + strings.Join(users, ", ")
 }
