@@ -1,23 +1,19 @@
 package model
 
 import (
-	"fmt"
+	"log"
 	"net"
 )
 
-// User This is a struct that will hold the user configuration
+// User holds the user configuration
 type User struct {
-	// Name string
-	Name string
-	// Address string
-	Address string
-	// C chan string
-	C chan string
-	// conn net.Conn
-	Conn net.Conn
+	Name    string      // User's name
+	Address string      // User's address
+	C       chan string // Channel for user messages
+	Conn    net.Conn    // User's connection
 }
 
-// NewUser This is a constructor for the User struct
+// NewUser is a constructor for the User struct
 func NewUser(conn net.Conn) *User {
 	user := &User{
 		Name:    conn.RemoteAddr().String(),
@@ -29,13 +25,12 @@ func NewUser(conn net.Conn) *User {
 	return user
 }
 
-// ListenMessage This is a method that will listen for messages
+// ListenMessage listens for messages on the user's channel and sends them to the connection
 func (u *User) ListenMessage() {
-	for {
-		msg := <-u.C
+	for msg := range u.C {
 		_, err := u.Conn.Write([]byte(msg + "\n"))
 		if err != nil {
-			fmt.Println("Error writing to connection:", err.Error())
+			log.Printf("Error writing to connection: %v", err)
 			return
 		}
 	}

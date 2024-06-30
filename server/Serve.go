@@ -3,28 +3,23 @@ package server
 import (
 	"fmt"
 	"im-System/model"
+	"log"
 	"net"
-	"strconv"
 	"sync"
 )
 
-// Server This is a struct that will hold the server configuration
+// Server holds the server configuration
 type Server struct {
-	// Ip string
-	Ip string
-	// Port int
-	Port int
-	// Online map[string]*model.User
-	Online map[string]*model.User
-	// MapLock sync.RWMutex
-	MapLock sync.RWMutex
-	// Message chan string
-	Message chan string
+	Ip      string                 // Server IP address
+	Port    int                    // Server port number
+	Online  map[string]*model.User // Map of online users
+	MapLock sync.RWMutex           // Read/Write mutex for the Online map
+	Message chan string            // Channel for broadcasting messages
 }
 
-// NewServer This is a constructor for the Serve struct
+// NewServer is a constructor for the Server struct
 func NewServer(ip string, port int) *Server {
-	fmt.Println("Server is starting")
+	log.Println("Server is starting")
 	return &Server{
 		Ip:      ip,
 		Port:    port,
@@ -33,9 +28,9 @@ func NewServer(ip string, port int) *Server {
 	}
 }
 
+// ListenMessage listens for messages and broadcasts them to all online users
 func (s *Server) ListenMessage() {
-	for {
-		msg := <-s.Message
+	for msg := range s.Message {
 		s.MapLock.Lock()
 		for _, user := range s.Online {
 			user.C <- msg
@@ -44,13 +39,13 @@ func (s *Server) ListenMessage() {
 	}
 }
 
-func (s *Server) Broadcast(user model.User, msg string) {
-	s.Message <- user.Name + ":" + msg
+// Broadcast sends a message to the Message channel
+func (s *Server) Broadcast(user *model.User, msg string) {
+	s.Message <- fmt.Sprintf("%s: %s", user.Name, msg)
 }
 
 // Handler This is a method that will handle the connection
 func (s *Server) Handler(conn net.Conn) {
-	fmt.Println("A new connection has been established")
 	user := model.NewUser(conn)
 	s.userOnline(user)
 	// If the user sends a message, send the message to everyone
@@ -58,46 +53,55 @@ func (s *Server) Handler(conn net.Conn) {
 	select {}
 }
 
-// Start This is a method that will start the server
+// Start starts the server
 func (s *Server) Start() {
-	listen, err := net.Listen("tcp", s.Ip+":"+strconv.Itoa(s.Port))
+	listen, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.Ip, s.Port))
 	if err != nil {
-		fmt.Println("Error listening:", err.Error())
+		log.Fatalf("Error listening: %v", err)
 		return
 	}
-	defer func(listen net.Listener) {
+	defer func() {
 		err := listen.Close()
 		if err != nil {
-			fmt.Println("Error closing listener:", err.Error())
-			return
+			log.Printf("Error closing listener: %v", err)
 		}
-	}(listen)
+	}()
+
+	// Start listening for incoming messages
 	go s.ListenMessage()
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
-			return
+			log.Printf("Error accepting connection: %v", err)
+			continue
 		}
 		go s.Handler(conn)
 	}
 }
 
-// userOnline User goes online
+// userOnline marks a user as online
 func (s *Server) userOnline(user *model.User) {
 	s.MapLock.Lock()
+	defer s.MapLock.Unlock()
 	s.Online[user.Name] = user
-	s.MapLock.Unlock()
-	s.Broadcast(*user, "has connected")
+	log.Printf("User %s has connected", user.Name)
+	s.Broadcast(user, "has connected")
 }
 
-// userOffline User goes offline
+// userOffline marks a user as offline
 func (s *Server) userOffline(user *model.User) {
 	s.MapLock.Lock()
+	defer s.MapLock.Unlock()
 	delete(s.Online, user.Name)
-	s.MapLock.Unlock()
-	s.Broadcast(*user, "has disconnected")
+	log.Printf("User %s has disconnected", user.Name)
+	err := user.Conn.Close()
+	if err != nil {
+		return
+	}
+	s.Broadcast(user, "has disconnected")
 }
 
+// sendMsg Encapsulation message sending method
 func (s *Server) sendMsg(conn net.Conn, user *model.User) {
 	buf := make([]byte, 4096)
 	for {
@@ -111,6 +115,6 @@ func (s *Server) sendMsg(conn net.Conn, user *model.User) {
 			s.userOffline(user)
 			return
 		}
-		s.Broadcast(*user, msg)
+		s.Broadcast(user, msg)
 	}
 }
