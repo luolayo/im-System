@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"im-System/model"
-	"io"
 	"log"
 	"net"
 	"strings"
@@ -46,10 +45,11 @@ func (s *Server) broadcast(user *model.User, msg string) {
 	s.Message <- fmt.Sprintf("%s: %s", user.Name, msg)
 }
 
-// Handler This is a method that will handle the connection
+// handler handles new connections
 func (s *Server) handler(conn net.Conn) {
 	user := model.NewUser(conn)
-	s.userOnline(user) // If the user sends a message, send the message to everyone
+	s.userOnline(user)
+	// If the user sends a message, send the message to everyone
 	go s.sendMsg(user)
 	select {}
 }
@@ -95,20 +95,29 @@ func (s *Server) userOffline(user *model.User) {
 	defer s.MapLock.Unlock()
 	delete(s.Online, user.Name)
 	log.Printf("User %s has disconnected", user.Name)
-	err := user.Conn.Close()
-	if err != nil {
-		return
+	// Check if the connection is already closed before attempting to close it
+	if user.Conn != nil {
+		err := user.Conn.Close()
+		if err != nil {
+			log.Printf("Error closing connection for user %s", user.Name)
+		} else {
+			user.Conn = nil // Ensure the connection is marked as nil after closing
+		}
 	}
 	s.broadcast(user, "has disconnected")
 }
 
-// sendMsg Encapsulation message sending method
+// sendMsg handles message sending from a user
 func (s *Server) sendMsg(user *model.User) {
 	buf := make([]byte, 4096)
 	for {
+		if user.Conn == nil {
+			return
+		}
 		cnt, err := user.Conn.Read(buf)
-		if err != nil && err != io.EOF {
+		if err != nil {
 			log.Printf("Error reading from %s: %v", user.Name, err)
+			s.userOffline(user)
 			return
 		}
 		msg := string(buf[:cnt-1])
@@ -116,6 +125,7 @@ func (s *Server) sendMsg(user *model.User) {
 	}
 }
 
+// listUsers returns a string of all online users
 func (s *Server) listUsers() string {
 	// Print out all online users
 	s.MapLock.Lock()
@@ -136,8 +146,7 @@ func (s *Server) handleUserMessage(user *model.User, msg string) {
 		s.userOffline(user)
 	case model.CmdList:
 		log.Printf("User %s sent list command", user.Name)
-		s.listUsers()
-		s.broadcast(user, s.listUsers())
+		user.C <- s.listUsers()
 	default:
 		s.broadcast(user, msg)
 	}
