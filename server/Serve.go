@@ -100,8 +100,6 @@ func (s *Server) userOffline(user *model.User) {
 		err := user.Conn.Close()
 		if err != nil {
 			log.Printf("Error closing connection for user %s", user.Name)
-		} else {
-			user.Conn = nil // Ensure the connection is marked as nil after closing
 		}
 	}
 	s.broadcast(user, "has disconnected")
