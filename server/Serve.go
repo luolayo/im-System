@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"im-System/model"
+	"io"
 	"log"
 	"net"
 	"strings"
@@ -29,8 +30,8 @@ func NewServer(ip string, port int) *Server {
 	}
 }
 
-// ListenMessage listens for messages and broadcasts them to all online users
-func (s *Server) ListenMessage() {
+// listenMessage listens for messages and broadcasts them to all online users
+func (s *Server) listenMessage() {
 	for msg := range s.Message {
 		s.MapLock.Lock()
 		for _, user := range s.Online {
@@ -40,17 +41,17 @@ func (s *Server) ListenMessage() {
 	}
 }
 
-// Broadcast sends a message to the Message channel
-func (s *Server) Broadcast(user *model.User, msg string) {
+// broadcast sends a message to the Message channel
+func (s *Server) broadcast(user *model.User, msg string) {
 	s.Message <- fmt.Sprintf("%s: %s", user.Name, msg)
 }
 
 // Handler This is a method that will handle the connection
-func (s *Server) Handler(conn net.Conn) {
+func (s *Server) handler(conn net.Conn) {
 	user := model.NewUser(conn)
 	s.userOnline(user)
 	// If the user sends a message, send the message to everyone
-	go s.sendMsg(conn, user)
+	go s.sendMsg(user)
 	select {}
 }
 
@@ -69,14 +70,14 @@ func (s *Server) Start() {
 	}()
 
 	// Start listening for incoming messages
-	go s.ListenMessage()
+	go s.listenMessage()
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
 			log.Printf("Error accepting connection: %v", err)
 			continue
 		}
-		go s.Handler(conn)
+		go s.handler(conn)
 	}
 }
 
@@ -86,7 +87,7 @@ func (s *Server) userOnline(user *model.User) {
 	defer s.MapLock.Unlock()
 	s.Online[user.Name] = user
 	log.Printf("User %s has connected", user.Name)
-	s.Broadcast(user, "has connected")
+	s.broadcast(user, "has connected")
 }
 
 // userOffline marks a user as offline
@@ -99,28 +100,23 @@ func (s *Server) userOffline(user *model.User) {
 	if err != nil {
 		return
 	}
-	s.Broadcast(user, "has disconnected")
+	s.broadcast(user, "has disconnected")
 }
 
 // sendMsg Encapsulation message sending method
-func (s *Server) sendMsg(conn net.Conn, user *model.User) {
+func (s *Server) sendMsg(user *model.User) {
 	buf := make([]byte, 4096)
 	for {
-		cnt, err := conn.Read(buf)
-		if err != nil {
-			fmt.Println("Error reading:", err.Error())
+		cnt, err := user.Conn.Read(buf)
+		if err != nil && err != io.EOF {
+			if err == io.EOF {
+				return
+			}
+			log.Printf("Error reading from %s: %v", user.Name, err)
 			return
 		}
 		msg := string(buf[:cnt-1])
-		if msg == "exit" {
-			s.userOffline(user)
-			return
-		}
-		if msg == "list" {
-			user.C <- s.listUsers()
-			continue
-		}
-		s.Broadcast(user, msg)
+		s.handleUserMessage(user, msg)
 	}
 }
 
@@ -133,4 +129,20 @@ func (s *Server) listUsers() string {
 		users = append(users, user.Name)
 	}
 	return "Online users: " + strings.Join(users, ", ")
+}
+
+// handleUserMessage processes the message sent by the user
+func (s *Server) handleUserMessage(user *model.User, msg string) {
+	command := model.ParseCommand(msg)
+	switch command {
+	case model.CmdExit:
+		log.Printf("User %s sent exit command", user.Name)
+		s.userOffline(user)
+	case model.CmdList:
+		log.Printf("User %s sent list command", user.Name)
+		s.listUsers()
+		s.broadcast(user, s.listUsers())
+	default:
+		s.broadcast(user, msg)
+	}
 }
