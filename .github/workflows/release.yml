@@ -32,4 +32,4 @@ jobs:
           goarch: ${{ matrix.goarch }}
           goversion: 1.22
           binary_name: "im-System"
-          extra_files: README.md, client.go
+          extra_files: README.md
