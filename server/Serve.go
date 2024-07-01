@@ -145,7 +145,26 @@ func (s *Server) handleUserMessage(user *model.User, msg string) {
 	case model.CmdList:
 		log.Printf("User %s sent list command", user.Name)
 		user.C <- s.listUsers()
+	case model.CmdRename:
+		newName := strings.TrimSpace(strings.TrimPrefix(msg, "/rename "))
+		if newName == "" {
+			user.C <- "Invalid new name."
+		} else {
+			oldName := user.Name
+			s.renameUser(user, newName)
+			log.Printf("User %s renamed to %s", oldName, newName)
+			s.broadcast(user, fmt.Sprintf("has renamed to %s", newName))
+		}
 	default:
 		s.broadcast(user, msg)
 	}
+}
+
+// renameUser changes the username of a user
+func (s *Server) renameUser(user *model.User, newName string) {
+	s.MapLock.Lock()
+	defer s.MapLock.Unlock()
+	delete(s.Online, user.Name)
+	user.Name = newName
+	s.Online[newName] = user
 }

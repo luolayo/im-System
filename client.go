@@ -56,6 +56,9 @@ func main() {
 	name, _ := reader.ReadString('\n')
 	client.Name = strings.TrimSpace(name)
 
+	// Automatically rename the user after connection
+	client.SendMessage("/rename " + client.Name)
+
 	// Start receiving messages
 	go client.ReceiveMessages()
 
