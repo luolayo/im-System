@@ -62,9 +62,11 @@ func (s *Server) Start() {
 		return
 	}
 	defer func() {
-		err := listen.Close()
-		if err != nil {
-			log.Printf("Error closing listener: %v", err)
+		if listen != nil {
+			err := listen.Close()
+			if err != nil {
+				log.Printf("Error closing listener: %v", err)
+			}
 		}
 	}()
 
@@ -114,8 +116,14 @@ func (s *Server) sendMsg(user *model.User) {
 		}
 		cnt, err := user.Conn.Read(buf)
 		if err != nil {
-			log.Printf("Error reading from %s: %v", user.Name, err)
-			s.userOffline(user)
+			if strings.Contains(err.Error(), "use of closed network connection") {
+				s.userOffline(user)
+				return
+			}
+			if strings.Contains(err.Error(), "EOF") {
+				s.userOffline(user)
+				return
+			}
 			return
 		}
 		msg := string(buf[:cnt-1])
