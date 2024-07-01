@@ -1,12 +1,10 @@
-package main
+package client
 
 import (
 	"bufio"
 	"fmt"
 	"log"
 	"net"
-	"os"
-	"strings"
 )
 
 type Client struct {
@@ -43,36 +41,5 @@ func (c *Client) ReceiveMessages() {
 			return
 		}
 		fmt.Print(msg)
-	}
-}
-
-func main() {
-	serverAddr := "127.0.0.1:30001" // Server address
-	client := NewClient(serverAddr)
-
-	// Prompt for client name
-	fmt.Print("Enter your name: ")
-	reader := bufio.NewReader(os.Stdin)
-	name, _ := reader.ReadString('\n')
-	client.Name = strings.TrimSpace(name)
-
-	// Automatically rename the user after connection
-	client.SendMessage("/rename " + client.Name)
-
-	// Start receiving messages
-	go client.ReceiveMessages()
-
-	// Send messages to server
-	for {
-		fmt.Print("> ")
-		msg, _ := reader.ReadString('\n')
-		msg = strings.TrimSpace(msg)
-		if msg == "" {
-			continue
-		}
-		client.SendMessage(msg)
-		if msg == "exit" {
-			break
-		}
 	}
 }
