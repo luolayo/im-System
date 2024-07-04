@@ -30,8 +30,6 @@ func customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 
 // NewLogger function, creates and returns a Logger instance
 func NewLogger(level Level) *Logger {
-	// Output to standard output
-	out := os.Stdout
 
 	// Set log level
 	al := zap.NewAtomicLevelAt(level)
@@ -54,8 +52,8 @@ func NewLogger(level Level) *Logger {
 
 	// Create the log core
 	core := zapcore.NewCore(
-		zapcore.NewConsoleEncoder(config),                                             // Use ConsoleEncoder to output logs in a custom format
-		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(out)), // Output to both console and specified output
+		zapcore.NewConsoleEncoder(config),                       // Use ConsoleEncoder to output logs in a custom format
+		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), // Output to both console and specified output
 		al,
 	)
 
