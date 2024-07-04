@@ -64,23 +64,23 @@ func NewLogger(level Level) *Logger {
 }
 
 // Debug level log method
-func (l *Logger) Debug(args ...any) {
-	l.sugarLogger.Debug(args...)
+func (l *Logger) Debug(msg string, args ...any) {
+	l.sugarLogger.Debugf(msg, args...)
 }
 
 // Info level log method
-func (l *Logger) Info(args ...any) {
-	l.sugarLogger.Info(args...)
+func (l *Logger) Info(msg string, args ...any) {
+	l.sugarLogger.Infof(msg, args...)
 }
 
 // Warn level log method
-func (l *Logger) Warn(args ...any) {
-	l.sugarLogger.Warn(args...)
+func (l *Logger) Warn(msg string, args ...any) {
+	l.sugarLogger.Warnf(msg, args...)
 }
 
 // Error level log method
-func (l *Logger) Error(args ...any) {
-	l.sugarLogger.Error(args...)
+func (l *Logger) Error(msg string, args ...any) {
+	l.sugarLogger.Errorf(msg, args...)
 }
 
 // Sync method to flush the buffer
