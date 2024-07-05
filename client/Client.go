@@ -3,95 +3,110 @@ package client
 import (
 	"bufio"
 	"fmt"
-	Logger "im-System/logger"
-	"im-System/util"
 	"net"
+	"os"
 	"strings"
 )
 
+// Client struct
 type Client struct {
-	Conn        net.Conn
-	Name        string
-	MessageChan chan string // Channel to notify message received
-	logger      Logger.Logger
+	conn   net.Conn
+	name   string
+	server string
 }
 
-// NewClient creates a new client and connects to the Server
+// NewClient creates a new client
 func NewClient(serverAddr string) *Client {
-	logger := *Logger.NewLogger(Logger.ErrorLevel)
-	conn, err := net.Dial("tcp", serverAddr)
-	if err != nil {
-		logger.Error("Error connecting to server: %v", err)
-	}
 	return &Client{
-		Conn:        conn,
-		MessageChan: make(chan string), // Initialize the message channel
-		logger:      logger,
+		server: serverAddr,
 	}
 }
 
-// SendMessage sends a message to the Server
-func (c *Client) SendMessage(msg string) {
-	_, err := c.Conn.Write([]byte(msg + "\n"))
+// Connect to the server
+func (c *Client) Connect() error {
+	conn, err := net.Dial("tcp", c.server)
 	if err != nil {
-		c.logger.Error("Error sending message: %v", err)
+		return fmt.Errorf("error connecting to server: %v", err)
 	}
+	c.conn = conn
+
+	// Start a goroutine to handle incoming messages
+	go c.handleServerMessages()
+
+	return nil
 }
 
-// ReceiveMessages receives messages from the Server
-func (c *Client) ReceiveMessages(done chan struct{}) {
-	reader := bufio.NewReader(c.Conn)
+// handleServerMessages listens for messages from the server and prints them
+func (c *Client) handleServerMessages() {
 	for {
-		msg, err := reader.ReadString('\n')
+		message := make([]byte, 1024)
+		n, err := c.conn.Read(message)
 		if err != nil {
-			c.logger.Error("Error receiving message: %v", err)
-			close(done)
+			fmt.Println("Error reading from server:", err)
 			return
 		}
-		fmt.Print("\r" + msg + "> ") // Print the server message and reprint the prompt
-		// Check if the message indicates that the user has been kicked out
-		if strings.TrimSpace(msg) == "You have been inactive for too long. You will be disconnected." {
-			fmt.Println("\nYou have been inactive for too long. You will be disconnected.")
-			close(done)
-			return
+		fmt.Print("\r" + string(message[:n]) + "> ") // Print the server message and reprint the prompt
+		if strings.Contains(string(message[:n]), "disconnected") {
+			os.Exit(0)
 		}
-		c.MessageChan <- "" // Notify the main routine to reprint the prompt
 	}
 }
 
-func (c *Client) Start() {
-	// Prompt for newClient name
-	fmt.Print("Enter your name: ")
-	name := util.InputString()
-	c.Name = strings.TrimSpace(name)
+// SendMessage sends a message to the server
+func (c *Client) SendMessage(message string) {
+	_, err := c.conn.Write([]byte(message + "\n"))
+	if err != nil {
+		fmt.Println("Error sending message:", err)
+	}
+}
 
-	// Automatically rename the user after connection
-	c.SendMessage("/rename " + c.Name)
+// StartClient starts the client and displays the menu
+func (c *Client) StartClient() {
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Println("\nMenu:")
+		fmt.Println("1. Exit")
+		fmt.Println("2. Rename User")
+		fmt.Println("3. Enter Public Chat Mode")
+		fmt.Println("4. Query all online users")
+		fmt.Print("Enter your choice: ")
 
-	done := make(chan struct{})
+		if scanner.Scan() {
+			choice := scanner.Text()
+			switch choice {
+			case "1":
+				fmt.Println("Exiting...")
+				c.SendMessage("/exit")
+				return
+			case "2":
+				fmt.Print("Enter new username: ")
+				if scanner.Scan() {
+					newName := scanner.Text()
+					c.SendMessage("/rename " + newName)
+				}
+			case "3":
+				c.enterPublicChatMode()
+			case "4":
+				c.SendMessage("/users")
+			default:
+				fmt.Println("Invalid choice. Please try again.")
+			}
+		}
+	}
+}
 
-	// Start receiving messages
-	go c.ReceiveMessages(done)
-
-	// Send messages to Server
+// enterPublicChatMode handles the public chat mode
+func (c *Client) enterPublicChatMode() {
+	fmt.Println("Entering public chat mode. Type '/exit' to return to the menu.")
+	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("> ")
-		msg := util.InputString()
-		if msg == "" {
-			continue
-		}
-		c.SendMessage(msg)
-		if msg == "/exit" {
-			c.SendMessage("/exit")
-			break
-		}
-		// Wait for a message to be received or done channel to be closed before printing the next prompt
-		select {
-		case <-c.MessageChan:
-			// Message received, continue to next iteration
-		case <-done:
-			// Done signal received, break the loop
-			return
+		if scanner.Scan() {
+			text := scanner.Text()
+			if text == "/exit" {
+				return
+			}
+			c.SendMessage(text)
 		}
 	}
 }

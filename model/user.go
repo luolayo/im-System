@@ -3,6 +3,7 @@ package model
 import (
 	Logger "im-System/logger"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -43,6 +44,9 @@ func (u *User) Close() {
 	if u.Conn != nil {
 		err := u.Conn.Close()
 		if err != nil {
+			if strings.Contains(err.Error(), "use of closed network connection") {
+				return
+			}
 			logger := Logger.NewLogger(Logger.ErrorLevel)
 			logger.Error("Error closing user connection: %v", err)
 		}

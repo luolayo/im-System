@@ -42,5 +42,10 @@ func startClient() {
 		serverAddr = "127.0.0.1:30001"
 	}
 	newClient := client.NewClient(serverAddr)
-	newClient.Start()
+	err := newClient.Connect()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	newClient.StartClient()
 }

@@ -93,6 +93,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 	}(conn)
 
+	// For now, just add the user to the list of clients
 	user := model.NewUser(conn, "")
 	s.addUser(user)
 
@@ -107,11 +108,8 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 		n, err := conn.Read(buf)
 		if err != nil {
-			if err.Error() == "EOF" {
-				s.removeUser(conn)
-				return
-			}
-			if strings.Contains(err.Error(), "use of closed network connection") {
+			// If the connection is closed, remove the user
+			if err.Error() == "EOF" || strings.Contains(err.Error(), "closed") {
 				s.removeUser(conn)
 				return
 			}
@@ -128,16 +126,7 @@ func (s *Server) broadcastMessages() {
 	for {
 		select {
 		case msg := <-s.messages:
-			s.mu.Lock()
-			for conn, user := range s.clients {
-				if user != msg.User {
-					_, err := conn.Write([]byte(fmt.Sprintf("%s: %s", msg.User.Name(), msg.Content)))
-					if err != nil {
-						s.logger.Error("Error writing to connection: %s", err)
-					}
-				}
-			}
-			s.mu.Unlock()
+			s.sendMessageToAllUsers(msg)
 		case <-s.quit:
 			return
 		}
@@ -170,11 +159,7 @@ func (s *Server) addUser(user *model.User) {
 	defer s.mu.Unlock()
 	s.clients[user.Conn] = user
 	s.userEvents <- model.UserEvent{Type: model.UserJoin, User: user}
-	_, err := user.Conn.Write([]byte("Welcome to the chat!\n"))
-	if err != nil {
-		s.logger.Error("Error writing to connection: %s", err)
-		return
-	}
+	s.sendMessageToUser(user, "Welcome to the chat!\n")
 }
 
 // removeUser removes a user from the server's clients
@@ -187,7 +172,7 @@ func (s *Server) removeUser(conn net.Conn) {
 		}
 		delete(s.clients, conn)
 		s.userEvents <- model.UserEvent{Type: model.UserLeave, User: user}
-		user.Close()
+		//user.Close()
 	}
 }
 
@@ -248,10 +233,7 @@ func (s *Server) listUsers(requestingUser *model.User) {
 
 	userList := strings.Join(users, ", ")
 	message := fmt.Sprintf("Online users: %s\n", userList)
-	_, err := requestingUser.Conn.Write([]byte(message))
-	if err != nil {
-		s.logger.Error("Error writing to connection: %s", err)
-	}
+	s.sendMessageToUser(requestingUser, message)
 }
 
 func (s *Server) resetUserTimer(user *model.User) {
@@ -259,10 +241,30 @@ func (s *Server) resetUserTimer(user *model.User) {
 		user.Timer.Stop()
 	}
 	user.Timer = time.AfterFunc(5*time.Minute, func() {
-		_, err := user.Conn.Write([]byte("You have been inactive for too long. You will be disconnected.\n"))
-		if err != nil {
-			s.logger.Error("Error writing to connection: %s", err)
-		}
+		s.sendMessageToUser(user, "You have been inactive for 5 minutes and will be disconnected\n")
 		s.removeUser(user.Conn)
 	})
+}
+
+// sendMessageToUser sends a message to a specific user
+func (s *Server) sendMessageToUser(user *model.User, message string) {
+	_, err := user.Conn.Write([]byte(message))
+	if err != nil {
+		if strings.Contains(err.Error(), "closed") {
+			s.removeUser(user.Conn)
+			return
+		}
+		s.logger.Error("Error writing to connection: %s", err)
+	}
+}
+
+// sendMessageToAllUsers sends a message to all users
+func (s *Server) sendMessageToAllUsers(msg model.Message) {
+	s.mu.Lock()
+	for _, user := range s.clients {
+		if user != msg.User {
+			s.sendMessageToUser(user, fmt.Sprintf("%s: %s", msg.User.Name(), msg.Content))
+		}
+	}
+	defer s.mu.Unlock()
 }
