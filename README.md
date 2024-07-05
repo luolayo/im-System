@@ -54,7 +54,7 @@ After starting, the client will connect to the server and prompt the user to ent
 - View user list: Enter /list and press enter to view the current online users.
 - Change username: Enter /rename <new_name> and press enter to change your username.
 
-## 实例
+## Example
 
 ```
 Enter '1' to start the Server or '2' to start the client: 2
