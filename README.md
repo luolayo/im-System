@@ -1,14 +1,18 @@
 # IM-System
 
-IM-System is a simple instant messaging system based on the Go language, including server and client implementations. The server side uses the `net` package to handle network connections and supports basic public chat functionality, user list viewing, and username modification.
+IM-System is a simple instant messaging system based on the Go language, including server and client implementations.
+The server side uses the `net` package to handle network connections and supports basic public chat functionality, user
+list viewing, and username modification.
 
 ## Features
 
-- **Public Chat**: All users connected to the server can send messages to each other in the same chat room.
-- **User List**: Users can view the current online user list with the `/list` command.
-- **Username Modification**: Users can change their username with the `/rename <new_name>` command.
-- **User Join/Leave Notifications**: The server sends notifications to all users when a user joins or leaves.
-- **User Exit**: Users can exit the chat room with the `/exit` command.
+-Users can connect to the server for public chat.
+
+-Support users to modify their usernames.
+
+-Automatically detect the user's connection status and handle it automatically when the connection is disconnected.
+
+-Provide basic chat commands such as exiting and listing online users.
 
 ## Installation and Running
 
@@ -43,29 +47,40 @@ Start the client with the following command:
 ./im-system
 ```
 
-After starting, the client will connect to the server and prompt the user to enter a username. Once the username is entered, the user can start chatting.
+After starting, the client will connect to the server and prompt the user to enter a username. Once the username is
+entered, the user can start chatting.
 
 ## Usage
 
-### Client Commands
+### Server
 
-- Send a message: Directly enter the message and press enter to send it to the public chat.
-- Exit: Enter /exit and press enter to exit the client.
-- View user list: Enter /list and press enter to view the current online users.
-- Change username: Enter /rename <new_name> and press enter to change your username.
-
-## Example
-
+```bash
+2024/07/04 10:00:00 INFO Starting server on 127.0.0.1:8080
 ```
-Enter '1' to start the Server or '2' to start the client: 2
-Enter Server address (default 127.0.0.1:30001):
-Enter your name: luola
-> Welcome to the chat!
-You have successfully changed your name to luola
+
+### Client
+
+```bash
+Enter server IP: 127.0.0.1
+Enter server port: 8080
+
+Menu:
+1. Exit
+2. Rename User
+3. Enter Public Chat Mode
+Enter your choice: 
+```
+
+### Public chat mode
+
+```bash
+Entering public chat mode. Type '/exit' to return to the menu.
 > Hello everyone!
-> list
-Online users: luola
-> rename john
-You have successfully changed your name to john
-> exit
+> /exit
 ```
+
+## TODO
+- [ ] Add private chat function
+- [ ] Add user registration and login functions
+- [ ] Improve the log module to support different levels of log output
+- [ ] Add more commands and functions
