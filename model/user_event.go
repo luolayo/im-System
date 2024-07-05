@@ -7,6 +7,10 @@ const (
 	UserLeave = "leave"
 	// UserMessage is the event type for a user message
 	UserMessage = "message"
+	// UserList is the event type for a user list
+	UserList = "users"
+	// UserRename is the event type for a user renaming
+	UserRename = "rename"
 )
 
 // UserEvent represents events related to users

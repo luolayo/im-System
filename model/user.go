@@ -22,6 +22,9 @@ func NewUser(conn net.Conn, name string) *User {
 }
 
 func (u *User) Name() string {
+	if u.name == "" {
+		return u.address
+	}
 	return u.name
 }
 
