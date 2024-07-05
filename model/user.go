@@ -3,13 +3,15 @@ package model
 import (
 	Logger "im-System/logger"
 	"net"
+	"time"
 )
 
 // User represents a connected user
 type User struct {
-	Conn    net.Conn // Conn is the network connection associated with the user
-	name    string   // Name is the user's name
-	address string   // Address is the user's network address
+	Conn    net.Conn    // Conn is the network connection associated with the user
+	name    string      // Name is the user's name
+	address string      // Address is the user's network address
+	Timer   *time.Timer // Timer to track inactivity
 }
 
 // NewUser creates a new User instance

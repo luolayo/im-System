@@ -14,7 +14,6 @@ type Client struct {
 	Name        string
 	MessageChan chan string // Channel to notify message received
 	logger      Logger.Logger
-	isFive      bool
 }
 
 // NewClient creates a new client and connects to the Server
@@ -40,16 +39,23 @@ func (c *Client) SendMessage(msg string) {
 }
 
 // ReceiveMessages receives messages from the Server
-func (c *Client) ReceiveMessages() {
+func (c *Client) ReceiveMessages(done chan struct{}) {
 	reader := bufio.NewReader(c.Conn)
 	for {
 		msg, err := reader.ReadString('\n')
 		if err != nil {
 			c.logger.Error("Error receiving message: %v", err)
+			close(done)
 			return
 		}
 		fmt.Print("\r" + msg + "> ") // Print the server message and reprint the prompt
-		c.MessageChan <- ""          // Notify the main routine to reprint the prompt
+		// Check if the message indicates that the user has been kicked out
+		if strings.TrimSpace(msg) == "You have been inactive for too long. You will be disconnected." {
+			fmt.Println("\nYou have been inactive for too long. You will be disconnected.")
+			close(done)
+			return
+		}
+		c.MessageChan <- "" // Notify the main routine to reprint the prompt
 	}
 }
 
@@ -62,8 +68,10 @@ func (c *Client) Start() {
 	// Automatically rename the user after connection
 	c.SendMessage("/rename " + c.Name)
 
+	done := make(chan struct{})
+
 	// Start receiving messages
-	go c.ReceiveMessages()
+	go c.ReceiveMessages(done)
 
 	// Send messages to Server
 	for {
@@ -77,10 +85,13 @@ func (c *Client) Start() {
 			c.SendMessage("/exit")
 			break
 		}
-		// Wait for a message to be received before printing the next prompt
+		// Wait for a message to be received or done channel to be closed before printing the next prompt
 		select {
 		case <-c.MessageChan:
 			// Message received, continue to next iteration
+		case <-done:
+			// Done signal received, break the loop
+			return
 		}
 	}
 }

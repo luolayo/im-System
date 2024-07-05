@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Server represents the chat server
@@ -92,11 +93,12 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 	}(conn)
 
-	// For now, just add the user to the list of clients
 	user := model.NewUser(conn, "")
 	s.addUser(user)
 
-	// Read messages from the connection and broadcast them
+	// Start the inactivity timer
+	s.resetUserTimer(user)
+
 	buf := make([]byte, 1024)
 	for {
 		if conn == nil {
@@ -117,6 +119,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			s.removeUser(conn)
 			return
 		}
+		s.resetUserTimer(user) // Reset the timer on each message
 		s.handleUserMessage(user, buf[:n-1])
 	}
 }
@@ -145,13 +148,6 @@ func (s *Server) broadcastMessages() {
 func (s *Server) renameUser(user *model.User, newName string) {
 	oldName := user.Name()
 	user.SetName(newName)
-
-	// Notify the user who changed the name
-	confirmationMessage := fmt.Sprintf("You have successfully changed your name to %s\n", newName)
-	_, err := user.Conn.Write([]byte(confirmationMessage))
-	if err != nil {
-		s.logger.Error("Error writing to connection: %s", err)
-	}
 
 	// Notify all other users about the name change
 	s.mu.Lock()
@@ -186,8 +182,12 @@ func (s *Server) removeUser(conn net.Conn) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if user, ok := s.clients[conn]; ok {
+		if user.Timer != nil {
+			user.Timer.Stop()
+		}
 		delete(s.clients, conn)
 		s.userEvents <- model.UserEvent{Type: model.UserLeave, User: user}
+		user.Close()
 	}
 }
 
@@ -202,9 +202,9 @@ func (s *Server) handleUserEvents() {
 			case model.UserLeave:
 				s.logger.Info("%s left the chat", event.User.Name())
 			case model.UserMessage:
-				s.logger.Info("%s send a message", event.User.Name())
+				s.logger.Info("%s sent a message", event.User.Name())
 			case model.UserList:
-				s.logger.Info("%s List of users requested", event.User.Name())
+				s.logger.Info("%s requested the list of users", event.User.Name())
 			case model.UserRename:
 				s.logger.Info("%s renamed", event.User.Name())
 			}
@@ -252,4 +252,17 @@ func (s *Server) listUsers(requestingUser *model.User) {
 	if err != nil {
 		s.logger.Error("Error writing to connection: %s", err)
 	}
+}
+
+func (s *Server) resetUserTimer(user *model.User) {
+	if user.Timer != nil {
+		user.Timer.Stop()
+	}
+	user.Timer = time.AfterFunc(5*time.Minute, func() {
+		_, err := user.Conn.Write([]byte("You have been inactive for too long. You will be disconnected.\n"))
+		if err != nil {
+			s.logger.Error("Error writing to connection: %s", err)
+		}
+		s.removeUser(user.Conn)
+	})
 }
