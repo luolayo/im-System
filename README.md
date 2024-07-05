@@ -19,7 +19,7 @@ list viewing, and username modification.
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/im-System.git
+git clone https://github.com/luolayo/im-System.git
 cd im-System
 ```
 
