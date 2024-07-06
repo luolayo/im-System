@@ -69,6 +69,7 @@ func (c *Client) StartClient() {
 		fmt.Println("2. Rename User")
 		fmt.Println("3. Enter Public Chat Mode")
 		fmt.Println("4. Query all online users")
+		fmt.Println("5. Send private message")
 		fmt.Print("Enter your choice: ")
 
 		if scanner.Scan() {
@@ -88,6 +89,8 @@ func (c *Client) StartClient() {
 				c.enterPublicChatMode()
 			case "4":
 				c.SendMessage("/users")
+			case "5":
+				c.sendPrivateMessage()
 			default:
 				fmt.Println("Invalid choice. Please try again.")
 			}
@@ -107,6 +110,18 @@ func (c *Client) enterPublicChatMode() {
 				return
 			}
 			c.SendMessage(text)
+		}
+	}
+}
+func (c *Client) sendPrivateMessage() {
+	fmt.Println("Enter the username of the user you want to send a message to: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		recipient := scanner.Text()
+		fmt.Println("Enter the message you want to send: ")
+		if scanner.Scan() {
+			message := scanner.Text()
+			c.SendMessage("/private " + recipient + " " + message)
 		}
 	}
 }

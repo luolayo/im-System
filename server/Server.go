@@ -215,6 +215,15 @@ func (s *Server) handleUserMessage(user *model.User, msg []byte) {
 		s.renameUser(user, newName)
 		return
 	}
+	if strings.HasPrefix(message, "/private") {
+		parts := strings.SplitN(message, " ", 3)
+		if len(parts) < 3 {
+			s.sendMessageToUser(user, "Usage: /private <user> <message>\n")
+			return
+		}
+		s.sendPrivateMessage(user, parts[1], parts[2])
+		return
+	}
 	// Add line breaks to user messages
 	message += "\n"
 	s.userEvents <- model.UserEvent{Type: model.UserMessage, User: user}
@@ -267,4 +276,17 @@ func (s *Server) sendMessageToAllUsers(msg model.Message) {
 		}
 	}
 	defer s.mu.Unlock()
+}
+
+// sendPrivateMessage sends a private message to a specific user
+func (s *Server) sendPrivateMessage(from *model.User, username, message string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, user := range s.clients {
+		if user.Name() == username {
+			s.sendMessageToUser(user, fmt.Sprintf("[Private] %s: %s\n", from.Name(), message))
+			return
+		}
+	}
+	s.sendMessageToUser(from, fmt.Sprintf("User %s not found\n", username))
 }
