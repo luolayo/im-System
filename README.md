@@ -80,7 +80,7 @@ Entering public chat mode. Type '/exit' to return to the menu.
 ```
 
 ## TODO
-- [ ] Add private chat function
+- [x] Add private chat function
 - [ ] Add user registration and login functions
 - [ ] Improve the log module to support different levels of log output
 - [ ] Add more commands and functions
