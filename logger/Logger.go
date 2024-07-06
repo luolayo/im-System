@@ -50,10 +50,20 @@ func NewLogger(level Level) *Logger {
 		EncodeName:     zapcore.FullNameEncoder,          // Full name encoder
 	}
 
+	if _, err := os.Stat("../log"); os.IsNotExist(err) {
+		err := os.Mkdir("../log", 0755)
+		if err != nil {
+			return nil
+		} // Create log directory
+	}
+	logFile, err := os.OpenFile("../log/log.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
 	// Create the log core
 	core := zapcore.NewCore(
-		zapcore.NewConsoleEncoder(config),                       // Use ConsoleEncoder to output logs in a custom format
-		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), // Output to both console and specified output
+		zapcore.NewConsoleEncoder(config),                                                 // Use ConsoleEncoder to output logs in a custom format
+		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(logFile)), // Output to both console and specified output
 		al,
 	)
 
